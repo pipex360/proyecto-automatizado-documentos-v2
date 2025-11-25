@@ -1,4 +1,5 @@
 from docx import Document
+from docx.enum.text import WD_ALIGN_PARAGRAPH
 import zipfile
 import shutil
 import os
@@ -10,10 +11,9 @@ class ProcesadorPlantillas:
         self.doc = None
     
     def reemplazar_en_parrafo(self, parrafo, datos):
-        """Reemplaza marcadores en un párrafo completo, manejando runs fragmentados"""
+        """Reemplaza marcadores en un párrafo preservando formato"""
         texto_completo = parrafo.text
         
-        # Verificar si hay marcadores
         if '{{' not in texto_completo or '}}' not in texto_completo:
             return
         
@@ -23,26 +23,58 @@ class ProcesadorPlantillas:
             marcador = f"{{{{{key}}}}}"
             texto_nuevo = texto_nuevo.replace(marcador, str(value))
         
-        # Si cambió algo, reconstruir el párrafo
         if texto_nuevo != texto_completo:
-            # Guardar el formato del primer run
-            formato_original = None
-            if parrafo.runs:
-                formato_original = parrafo.runs[0]
+            # Guardar formato del párrafo
+            estilo_parrafo = parrafo.style
+            alineacion = parrafo.alignment
             
-            # Limpiar todos los runs
+            # Guardar formato del primer run si existe
+            formato_run = None
+            if parrafo.runs:
+                primer_run = parrafo.runs[0]
+                formato_run = {
+                    'bold': primer_run.bold,
+                    'italic': primer_run.italic,
+                    'underline': primer_run.underline,
+                    'font_name': primer_run.font.name,
+                    'font_size': primer_run.font.size
+                }
+            
+            # Limpiar runs
             for run in parrafo.runs:
                 run.text = ''
             
-            # Agregar el texto nuevo en el primer run
+            # Agregar texto nuevo
             if parrafo.runs:
-                parrafo.runs[0].text = texto_nuevo
+                nuevo_run = parrafo.runs[0]
             else:
-                parrafo.add_run(texto_nuevo)
+                nuevo_run = parrafo.add_run()
+            
+            nuevo_run.text = texto_nuevo
+            
+            # Restaurar formato del run
+            if formato_run:
+                if formato_run['bold'] is not None:
+                    nuevo_run.bold = formato_run['bold']
+                if formato_run['italic'] is not None:
+                    nuevo_run.italic = formato_run['italic']
+                if formato_run['underline'] is not None:
+                    nuevo_run.underline = formato_run['underline']
+                if formato_run['font_name']:
+                    nuevo_run.font.name = formato_run['font_name']
+                if formato_run['font_size']:
+                    nuevo_run.font.size = formato_run['font_size']
+            
+            # Restaurar formato del párrafo
+            parrafo.style = estilo_parrafo
+            if alineacion:
+                parrafo.alignment = alineacion
+            else:
+                # Si no tiene alineación definida, usar justificado
+                parrafo.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
     
     def procesar(self, datos, ruta_salida):
         try:
-            # Cargar documento
             self.doc = Document(self.ruta_plantilla)
             
             # Reemplazar en párrafos
@@ -63,7 +95,6 @@ class ProcesadorPlantillas:
                 for para in section.footer.paragraphs:
                     self.reemplazar_en_parrafo(para, datos)
                 
-                # Headers y footers también pueden tener tablas
                 for tabla in section.header.tables:
                     for fila in tabla.rows:
                         for celda in fila.cells:
@@ -79,7 +110,7 @@ class ProcesadorPlantillas:
             # Guardar
             self.doc.save(ruta_salida)
             
-            # Segundo paso: reemplazo en XML para elementos que python-docx no alcanza
+            # Segundo paso: XML
             temp_salida = ruta_salida + ".temp"
             if self.reemplazar_en_xml(ruta_salida, datos, temp_salida):
                 shutil.move(temp_salida, ruta_salida)
@@ -94,11 +125,9 @@ class ProcesadorPlantillas:
             temp_dir = 'temp_xml'
             os.makedirs(temp_dir, exist_ok=True)
             
-            # Extraer
             with zipfile.ZipFile(ruta_docx, 'r') as zip_ref:
                 zip_ref.extractall(temp_dir)
             
-            # Procesar todos los XML
             for carpeta, subcarpetas, archivos in os.walk(temp_dir):
                 for archivo in archivos:
                     if archivo.endswith('.xml'):
@@ -115,7 +144,6 @@ class ProcesadorPlantillas:
                             with open(ruta, 'w', encoding='utf-8') as f:
                                 f.write(contenido_nuevo)
             
-            # Recrear docx
             with zipfile.ZipFile(ruta_salida, 'w', zipfile.ZIP_DEFLATED) as docx:
                 for carpeta, subcarpetas, archivos in os.walk(temp_dir):
                     for archivo in archivos:
@@ -123,7 +151,6 @@ class ProcesadorPlantillas:
                         ruta_en_zip = os.path.relpath(ruta_completa, temp_dir)
                         docx.write(ruta_completa, ruta_en_zip)
             
-            # Limpiar
             shutil.rmtree(temp_dir)
             return True
         except Exception as e:
