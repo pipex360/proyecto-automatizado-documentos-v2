@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generador de Documentos</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #555;
+            font-weight: 500;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        textarea {
+            min-height: 150px;
+            resize: vertical;
+            font-family: monospace;
+        }
+        .btn {
+            background: #007bff;
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            width: 100%;
+            margin-top: 10px;
+        }
+        .btn:hover {
+            background: #0056b3;
+        }
+        .btn-ia {
+            background: #28a745;
+            margin-bottom: 10px;
+        }
+        .btn-ia:hover {
+            background: #218838;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        .loading {
+            text-align: center;
+            padding: 20px;
+            display: none;
+        }
+        .ia-hint {
+            font-size: 12px;
+            color: #666;
+            font-style: italic;
+            margin-top: 5px;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Generador de Memoria Técnica</h1>
+        
+        <div id="error" class="error"></div>
+        <div id="loading" class="loading">
+            <p>Generando documento...</p>
+        </div>
+        
+        <form id="formulario">
+            <div class="form-group">
+                <label for="EMPRESA">Nombre de la Empresa *</label>
+                <input type="text" id="EMPRESA" name="EMPRESA" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="RUT">RUT *</label>
+                <input type="text" id="RUT" name="RUT" placeholder="12.345.678-9" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="GIRO">Giro de la Empresa *</label>
+                <input type="text" id="GIRO" name="GIRO" required>
+                <span class="ia-hint">Este campo se usará para generar automáticamente la descripción</span>
+            </div>
+            
+            <div class="form-group">
+                <label for="DIRECCION">Dirección *</label>
+                <input type="text" id="DIRECCION" name="DIRECCION" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="NUMERO_TRABAJADORES">Número de Trabajadores *</label>
+                <input type="number" id="NUMERO_TRABAJADORES" name="NUMERO_TRABAJADORES" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="SUPERFICIE_CONSTRUIDA">Superficie Construida (m²) *</label>
+                <input type="number" id="SUPERFICIE_CONSTRUIDA" name="SUPERFICIE_CONSTRUIDA" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="SUPERFICIE_TERRENO">Superficie Terreno (m²) *</label>
+                <input type="number" id="SUPERFICIE_TERRENO" name="SUPERFICIE_TERRENO" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="NUMERO_EXTINTORES">Número de Extintores *</label>
+                <input type="number" id="NUMERO_EXTINTORES" name="NUMERO_EXTINTORES" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="DESCRIPCION_PROCESOS">Descripción de Procesos y Actividades *</label>
+                <button type="button" class="btn btn-ia" onclick="generarConIA()">
+                    🤖 Generar con IA
+                </button>
+                <textarea id="DESCRIPCION_PROCESOS" name="DESCRIPCION_PROCESOS" required></textarea>
+            </div>
+            
+            <button type="submit" class="btn">Generar Documento</button>
+        </form>
+    </div>
+    
+    <script>
+        async function generarConIA() {
+            const giro = document.getElementById('GIRO').value;
+            if (!giro) {
+                alert('Primero ingresa el Giro de la Empresa');
+                return;
+            }
+            
+            const btn = event.target;
+            btn.disabled = true;
+            btn.textContent = 'Generando...';
+            
+            try {
+                const response = await fetch('/generar-ia', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({giro: giro})
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    document.getElementById('DESCRIPCION_PROCESOS').value = data.descripcion;
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🤖 Generar con IA';
+            }
+        }
+        
+        document.getElementById('formulario').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = new FormData(e.target);
+            const datos = Object.fromEntries(formData.entries());
+            
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('error').style.display = 'none';
+            
+            try {
+                const response = await fetch('/generar', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(datos)
+                });
+                
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'Memoria_Tecnica.docx';
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                } else {
+                    const data = await response.json();
+                    document.getElementById('error').textContent = data.error;
+                    document.getElementById('error').style.display = 'block';
+                }
+            } catch (error) {
+                document.getElementById('error').textContent = 'Error: ' + error.message;
+                document.getElementById('error').style.display = 'block';
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>
