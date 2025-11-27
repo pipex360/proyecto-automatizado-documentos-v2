@@ -63,32 +63,43 @@ function beam_ai_enqueue_assets() {
     // Estilos principales del tema
     wp_enqueue_style('beam-ai-style', get_stylesheet_uri(), array(), $theme_version);
 
+    // Estilos modernos SaaS (incluidos por defecto)
+    wp_enqueue_style('beam-ai-modern-saas', get_template_directory_uri() . '/assets/css/modern-saas.css', array('beam-ai-style'), $theme_version);
+
     // Estilos del sitio original (se cargarán cuando copies los archivos)
     $main_css = get_template_directory() . '/assets/css/main.css';
     if (file_exists($main_css)) {
-        wp_enqueue_style('beam-ai-main', get_template_directory_uri() . '/assets/css/main.css', array(), $theme_version);
+        wp_enqueue_style('beam-ai-main', get_template_directory_uri() . '/assets/css/main.css', array('beam-ai-modern-saas'), $theme_version);
     }
 
     $custom_css = get_template_directory() . '/assets/css/custom.css';
     if (file_exists($custom_css)) {
-        wp_enqueue_style('beam-ai-custom', get_template_directory_uri() . '/assets/css/custom.css', array(), $theme_version);
+        wp_enqueue_style('beam-ai-custom', get_template_directory_uri() . '/assets/css/custom.css', array('beam-ai-modern-saas'), $theme_version);
     }
 
-    // JavaScript del sitio original
+    // JavaScript: jQuery (WordPress lo incluye)
+    // Sistema de animaciones moderno
+    wp_enqueue_script('beam-ai-animations', get_template_directory_uri() . '/assets/js/animations.js', array('jquery'), $theme_version, true);
+
+    // JavaScript del sitio original (se cargará cuando copies los archivos)
     $main_js = get_template_directory() . '/assets/js/main.js';
     if (file_exists($main_js)) {
-        wp_enqueue_script('beam-ai-main-js', get_template_directory_uri() . '/assets/js/main.js', array('jquery'), $theme_version, true);
+        wp_enqueue_script('beam-ai-main-js', get_template_directory_uri() . '/assets/js/main.js', array('jquery', 'beam-ai-animations'), $theme_version, true);
     }
 
-    // Scripts adicionales
-    wp_enqueue_script('beam-ai-custom-js', get_template_directory_uri() . '/assets/js/custom.js', array('jquery'), $theme_version, true);
+    // Scripts adicionales personalizados
+    wp_enqueue_script('beam-ai-custom-js', get_template_directory_uri() . '/assets/js/custom.js', array('jquery', 'beam-ai-animations'), $theme_version, true);
 
     // Pasar datos a JavaScript
-    wp_localize_script('beam-ai-custom-js', 'beamAjax', array(
+    wp_localize_script('beam-ai-animations', 'beamAjax', array(
         'ajaxurl' => admin_url('admin-ajax.php'),
         'nonce' => wp_create_nonce('beam_ajax_nonce'),
         'themeUrl' => get_template_directory_uri(),
+        'homeUrl' => home_url('/'),
     ));
+
+    // Google Fonts - Inter (tipografía moderna)
+    wp_enqueue_style('beam-ai-fonts', 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap', array(), null);
 }
 add_action('wp_enqueue_scripts', 'beam_ai_enqueue_assets');
 
